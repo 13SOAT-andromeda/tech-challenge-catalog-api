@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
-	categorymodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/category"
+	awsadapter "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/aws"
+	maintenancemodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/maintenance"
+	productmodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/product"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/repository"
 	adapthttp "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/handlers"
@@ -30,16 +33,26 @@ func main() {
 	}
 
 	// Auto Migration
-	if err := db.AutoMigrate(&categorymodel.Category{}); err != nil {
+	if err := db.AutoMigrate(&productmodel.Product{}, &maintenancemodel.Maintenance{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	// Wire Category: repo -> service -> handler
-	categoryRepo := repository.NewCategoryRepository(db)
-	categorySvc := services.NewCategoryService(categoryRepo)
-	categoryH := handlers.NewCategoryHandler(categorySvc)
+	// AWS Setup
+	snsPublisher, err := awsadapter.NewSNSPublisher(context.Background())
+	if err != nil {
+		log.Fatalf("failed to setup SNS publisher: %v", err)
+	}
 
-	router := adapthttp.SetupRouter(categoryH)
+	// Wire: repo -> service -> handler
+	productRepo := repository.NewProductRepository(db)
+	productSvc := services.NewProductService(productRepo, snsPublisher)
+	productH := handlers.NewProductHandler(productSvc)
+
+	maintenanceRepo := repository.NewMaintenanceRepository(db)
+	maintenanceSvc := services.NewMaintenanceService(maintenanceRepo)
+	maintenanceH := handlers.NewMaintenanceHandler(maintenanceSvc)
+
+	router := adapthttp.SetupRouter(productH, maintenanceH)
 
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {

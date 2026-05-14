@@ -3,10 +3,9 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/handlers"
-	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/middlewares"
 )
 
-func SetupRouter(categoryHandler *handlers.CategoryHandler) *gin.Engine {
+func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.MaintenanceHandler) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -15,19 +14,24 @@ func SetupRouter(categoryHandler *handlers.CategoryHandler) *gin.Engine {
 
 	api := r.Group("/api/v1")
 	{
-		categories := api.Group("/categories")
+		products := api.Group("/products")
 		{
-			categories.POST("/", categoryHandler.Create)
-			categories.GET("/", categoryHandler.List)
-			categories.GET("/:id", categoryHandler.GetByID)
+			products.POST("/", productH.Create)
+			products.GET("/", productH.List)
+			products.GET("/:id", productH.GetByID)
+			products.PUT("/:id", productH.Update)
+			products.DELETE("/:id", productH.Delete)
+		}
 
-			protected := categories.Group("/")
-			protected.Use(middlewares.AuthRequired())
-			{
-				protected.PUT("/:id", categoryHandler.Update)
-				protected.DELETE("/:id", categoryHandler.Delete)
-			}
+		maintenances := api.Group("/maintenances")
+		{
+			maintenances.POST("/", maintenanceH.Create)
+			maintenances.GET("/", maintenanceH.List)
+			maintenances.GET("/:id", maintenanceH.GetByID)
+			maintenances.PUT("/:id", maintenanceH.Update)
+			maintenances.DELETE("/:id", maintenanceH.Delete)
 		}
 	}
+
 	return r
 }
