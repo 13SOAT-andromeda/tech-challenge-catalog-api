@@ -1,0 +1,8 @@
+{
+  "id": "catalog_api_implementation_20260427",
+  "title": "Implementação do Microserviço de Catálogo (Catalog API)",
+  "description": "Criação de um novo microserviço independente para gestão de catálogo unificado (Produtos/Estoque e Serviços/Maintenances), com integração híbrida e reabastecimento automático.",
+  "status": "in_progress",
+  "created_at": "2026-04-27T23:45:00Z",
+  "updated_at": "2026-05-13T10:00:00Z"
+}
