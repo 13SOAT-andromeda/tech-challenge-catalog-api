@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/product"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/application/ports"
@@ -29,6 +31,9 @@ func (r *ProductRepositoryGorm) Create(productDomain *domain.Product) error {
 func (r *ProductRepositoryGorm) FindByID(id uuid.UUID) (*domain.Product, error) {
 	var model productmodel.Product
 	if err := r.db.First(&model, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrProductNotFound
+		}
 		return nil, err
 	}
 	return model.ToDomain(), nil

@@ -10,10 +10,9 @@ import (
 type BackorderStatus string
 
 const (
-	BackorderStatusPending   BackorderStatus = "PENDING"
-	BackorderStatusConfirmed BackorderStatus = "CONFIRMED"
-	BackorderStatusCancelled BackorderStatus = "CANCELLED"
-	BackorderStatusFulfilled BackorderStatus = "FULFILLED"
+	BackorderStatusPending BackorderStatus = "PENDING"
+	BackorderStatusOrdered BackorderStatus = "ORDERED"
+	BackorderStatusFailed  BackorderStatus = "FAILED"
 )
 
 type Backorder struct {

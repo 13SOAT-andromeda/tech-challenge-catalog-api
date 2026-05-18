@@ -8,6 +8,13 @@ import (
 	"gorm.io/gorm"
 )
 
+func (m *Maintenance) BeforeCreate(tx *gorm.DB) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	return nil
+}
+
 type Maintenance struct {
 	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Description       string    `gorm:"type:text;not null"`

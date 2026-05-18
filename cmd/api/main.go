@@ -4,9 +4,12 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	awsadapter "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/aws"
+	backordermodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/backorder"
 	maintenancemodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/maintenance"
 	productmodel "github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/model/product"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/database/repository"
@@ -32,26 +35,38 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	// Auto Migration
-	if err := db.AutoMigrate(&productmodel.Product{}, &maintenancemodel.Maintenance{}); err != nil {
+	if err := db.AutoMigrate(
+		&productmodel.Product{},
+		&maintenancemodel.Maintenance{},
+		&backordermodel.Backorder{},
+	); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
-	// AWS Setup
-	snsPublisher, err := awsadapter.NewSNSPublisher(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	snsPublisher, err := awsadapter.NewSNSPublisher(ctx)
 	if err != nil {
 		log.Fatalf("failed to setup SNS publisher: %v", err)
 	}
 
-	// Wire: repo -> service -> handler
 	productRepo := repository.NewProductRepository(db)
-	productSvc := services.NewProductService(productRepo, snsPublisher)
-	productH := handlers.NewProductHandler(productSvc)
+	backorderRepo := repository.NewBackorderRepository(db)
+	productSvc := services.NewProductService(productRepo, backorderRepo, snsPublisher)
+
+	sqsConsumer, err := awsadapter.NewSQSConsumer(ctx, productSvc)
+	if err != nil {
+		log.Printf("SQS consumer not started: %v", err)
+	} else {
+		go sqsConsumer.Start(ctx)
+	}
 
 	maintenanceRepo := repository.NewMaintenanceRepository(db)
 	maintenanceSvc := services.NewMaintenanceService(maintenanceRepo)
 	maintenanceH := handlers.NewMaintenanceHandler(maintenanceSvc)
 
+	productH := handlers.NewProductHandler(productSvc)
 	router := adapthttp.SetupRouter(productH, maintenanceH)
 
 	port := os.Getenv("HTTP_PORT")

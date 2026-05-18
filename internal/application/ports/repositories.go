@@ -29,3 +29,10 @@ type MaintenanceRepository interface {
 	Delete(id uuid.UUID) error
 	List() ([]*domain.Maintenance, error)
 }
+
+type BackorderRepository interface {
+	Create(backorder *domain.Backorder) error
+	FindByID(id uuid.UUID) (*domain.Backorder, error)
+	UpdateStatus(id uuid.UUID, status domain.BackorderStatus) error
+	FindPendingByProductID(productID uuid.UUID) ([]*domain.Backorder, error)
+}

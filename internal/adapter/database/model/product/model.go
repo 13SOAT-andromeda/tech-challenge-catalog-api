@@ -8,6 +8,13 @@ import (
 	"gorm.io/gorm"
 )
 
+func (p *Product) BeforeCreate(tx *gorm.DB) error {
+	if p.ID == uuid.Nil {
+		p.ID = uuid.New()
+	}
+	return nil
+}
+
 type Product struct {
 	ID                    uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name                  string    `gorm:"type:varchar(255);not null"`
