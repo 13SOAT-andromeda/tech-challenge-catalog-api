@@ -7,8 +7,10 @@ A **Catalog API** é o microserviço autoritativo para o catálogo unificado de 
 - **Stack:** Go, Gin, GORM, PostgreSQL.
 - **Arquitetura:** Hexagonal (Ports & Adapters).
 - **Mensageria:**
-  - **Consome:** Tópico `orders.approved`.
-  - **Publica:** Tópico `catalog.events` (eventos de feedback como `StockReserved`, `BackorderCreated`).
+  - **Tecnologia:** AWS SNS (Tópicos) e AWS SQS (Filas).
+  - **Consome:** Fila SQS `orders-approved-queue` (inscrita no tópico de ordens).
+  - **Publica:** Tópico SNS `catalog-events-topic`.
+  - **Resiliência:** Uso de Dead Letter Queues (DLQ) para reprocessamento de falhas.
 
 ## 3. Arquitetura de Fluxo
 - **Fase 1 (Validação Síncrona):** O serviço de Ordens realiza chamadas paralelas `POST` aos endpoints `/products/search` e `/maintenances/search` para obter dados de disponibilidade e preço para o orçamento.
