@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-api-config
+data:
+  HTTP_PORT: "8080"
+  AWS_REGION: "us-east-1"
+  SNS_TOPIC_CATALOG_EVENTS_ARN: ""
+  SQS_ORDERS_APPROVED_QUEUE_URL: ""
