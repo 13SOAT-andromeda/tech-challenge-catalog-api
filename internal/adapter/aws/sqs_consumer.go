@@ -21,14 +21,24 @@ type SQSConsumer struct {
 	productSvc *services.ProductService
 }
 
+// ordersEventEnvelope is the outer wrapper published by the orders service for all events.
+type ordersEventEnvelope struct {
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
+}
+
 type orderApprovedEvent struct {
-	OrderID uuid.UUID   `json:"order_id"`
-	Items   []orderItem `json:"items"`
+	OrderID    string      `json:"order_id"`
+	Items      []orderItem `json:"items"`
+	ApprovedAt time.Time   `json:"approved_at"`
 }
 
 type orderItem struct {
-	ProductID uuid.UUID `json:"product_id"`
-	Quantity  int       `json:"quantity"`
+	ID             string `json:"id"`
+	Kind           string `json:"kind"`
+	Name           string `json:"name"`
+	Quantity       int    `json:"qty"`
+	UnitPriceCents int64  `json:"unit_price_cents"`
 }
 
 // snsEnvelope unwraps messages forwarded from SNS → SQS subscriptions.
@@ -94,19 +104,43 @@ func (c *SQSConsumer) poll(ctx context.Context) {
 func (c *SQSConsumer) process(ctx context.Context, msg types.Message) error {
 	body := aws.ToString(msg.Body)
 
-	var envelope snsEnvelope
-	if err := json.Unmarshal([]byte(body), &envelope); err == nil && envelope.Message != "" {
-		body = envelope.Message
+	// Unwrap SNS → SQS notification envelope
+	var snsEnv snsEnvelope
+	if err := json.Unmarshal([]byte(body), &snsEnv); err == nil && snsEnv.Message != "" {
+		body = snsEnv.Message
+	}
+
+	// Unwrap orders service event envelope
+	var outerEnv ordersEventEnvelope
+	if err := json.Unmarshal([]byte(body), &outerEnv); err != nil {
+		return fmt.Errorf("unmarshal orders event envelope: %w", err)
+	}
+	if outerEnv.EventType != "order.approved" {
+		log.Printf("unexpected event type %q — skipping", outerEnv.EventType)
+		return nil
 	}
 
 	var event orderApprovedEvent
-	if err := json.Unmarshal([]byte(body), &event); err != nil {
-		return fmt.Errorf("failed to unmarshal OrderApproved event: %w", err)
+	if err := json.Unmarshal(outerEnv.Data, &event); err != nil {
+		return fmt.Errorf("unmarshal OrderApproved data: %w", err)
+	}
+
+	orderID, err := uuid.Parse(event.OrderID)
+	if err != nil {
+		return fmt.Errorf("invalid order_id %q: %w", event.OrderID, err)
 	}
 
 	for _, item := range event.Items {
-		if err := c.productSvc.DecreaseStock(ctx, item.ProductID, event.OrderID, item.Quantity); err != nil {
-			log.Printf("DecreaseStock failed for product %s order %s: %v", item.ProductID, event.OrderID, err)
+		if item.Kind != "product" {
+			continue
+		}
+		productID, err := uuid.Parse(item.ID)
+		if err != nil {
+			log.Printf("invalid product id %q in order %s — skipping", item.ID, event.OrderID)
+			continue
+		}
+		if err := c.productSvc.DecreaseStock(ctx, productID, orderID, item.Quantity); err != nil {
+			log.Printf("DecreaseStock failed product=%s order=%s: %v", item.ID, event.OrderID, err)
 		}
 	}
 	return nil
