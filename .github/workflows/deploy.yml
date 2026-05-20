@@ -146,5 +146,8 @@ jobs:
       - name: Apply kustomize overlay to EKS
         run: kubectl apply -k k8s/overlays/aws/
 
+      - name: Restart deployment to pull new image
+        run: kubectl rollout restart deployment/catalog-api
+
       - name: Verify deployment rollout
         run: kubectl rollout status deployment/catalog-api --timeout=120s
