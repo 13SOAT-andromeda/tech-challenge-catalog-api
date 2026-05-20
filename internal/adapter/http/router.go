@@ -12,7 +12,7 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 		c.JSON(200, gin.H{"status": "ok"})
 	})
   
-	api := r.Group("/")
+	api := r.Group("/v1/catalog")
 	{
 		products := api.Group("/products")
 		{
