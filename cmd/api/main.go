@@ -51,9 +51,16 @@ func main() {
 		log.Fatalf("failed to setup SNS publisher: %v", err)
 	}
 
+	var emailPublisher *awsadapter.EmailNotificationPublisher
+	if ep, err := awsadapter.NewEmailNotificationPublisher(ctx); err != nil {
+		log.Printf("email notification publisher not configured: %v", err)
+	} else {
+		emailPublisher = ep
+	}
+
 	productRepo := repository.NewProductRepository(db)
 	backorderRepo := repository.NewBackorderRepository(db)
-	productSvc := services.NewProductService(productRepo, backorderRepo, snsPublisher)
+	productSvc := services.NewProductService(productRepo, backorderRepo, snsPublisher, emailPublisher)
 
 	sqsConsumer, err := awsadapter.NewSQSConsumer(ctx, productSvc)
 	if err != nil {
