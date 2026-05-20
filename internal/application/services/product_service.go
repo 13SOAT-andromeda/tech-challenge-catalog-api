@@ -13,12 +13,10 @@ import (
 )
 
 type ProductService struct {
-	repo                 ports.ProductRepository
-	backorderRepo        ports.BackorderRepository
-	notificationPort     ports.CatalogNotificationPort
-	emailPort            ports.EmailNotificationPort
-	defaultRecipientEmail string
-	defaultRecipientName  string
+	repo             ports.ProductRepository
+	backorderRepo    ports.BackorderRepository
+	notificationPort ports.CatalogNotificationPort
+	emailPort        ports.EmailNotificationPort
 }
 
 func NewProductService(
@@ -26,15 +24,12 @@ func NewProductService(
 	backorderRepo ports.BackorderRepository,
 	notificationPort ports.CatalogNotificationPort,
 	emailPort ports.EmailNotificationPort,
-	recipientEmail, recipientName string,
 ) *ProductService {
 	return &ProductService{
-		repo:                 repo,
-		backorderRepo:        backorderRepo,
-		notificationPort:     notificationPort,
-		emailPort:            emailPort,
-		defaultRecipientEmail: recipientEmail,
-		defaultRecipientName:  recipientName,
+		repo:             repo,
+		backorderRepo:    backorderRepo,
+		notificationPort: notificationPort,
+		emailPort:        emailPort,
 	}
 }
 
@@ -58,7 +53,7 @@ func (s *ProductService) Delete(id uuid.UUID) error {
 	return s.repo.Delete(id)
 }
 
-func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID, orderID uuid.UUID, quantity int) error {
+func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID, orderID uuid.UUID, quantity int, recipientEmail, recipientName string) error {
 	product, err := s.repo.FindByID(productID)
 	if err != nil {
 		reason := domain.FailureReasonDBError
@@ -72,7 +67,7 @@ func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID,
 			StockAvailable:    0,
 			FailureReason:     reason,
 			ErrorDetail:       err.Error(),
-		})
+		}, recipientEmail, recipientName)
 		return err
 	}
 
@@ -85,14 +80,14 @@ func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID,
 				StockAvailable:    product.StockQuantity,
 				FailureReason:     domain.FailureReasonDBError,
 				ErrorDetail:       err.Error(),
-			})
+			}, recipientEmail, recipientName)
 			return err
 		}
 		if err := s.notificationPort.NotifyStockReserved(ctx, productID, orderID, quantity); err != nil {
 			return err
 		}
 		if s.emailPort != nil {
-			if err := s.emailPort.SendStockReservedEmail(ctx, s.defaultRecipientEmail, s.defaultRecipientName, productID, product.Name, orderID, quantity); err != nil {
+			if err := s.emailPort.SendStockReservedEmail(ctx, recipientEmail, recipientName, productID, product.Name, orderID, quantity); err != nil {
 				log.Printf("failed to send stock reserved email: %v", err)
 			}
 		}
@@ -101,7 +96,7 @@ func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID,
 
 	switch product.ReplenishmentStrategy {
 	case "IMMEDIATE", "BATCH":
-		return s.createBackorder(ctx, product, orderID, quantity)
+		return s.createBackorder(ctx, product, orderID, quantity, recipientEmail, recipientName)
 	default:
 		s.notifyFailed(ctx, domain.StockReservationFailure{
 			OrderID:           orderID,
@@ -110,12 +105,12 @@ func (s *ProductService) DecreaseStock(ctx context.Context, productID uuid.UUID,
 			StockAvailable:    product.StockQuantity,
 			FailureReason:     domain.FailureReasonInsufficientStock,
 			ErrorDetail:       fmt.Sprintf("requested %d units, only %d available", quantity, product.StockQuantity),
-		})
+		}, recipientEmail, recipientName)
 		return domain.ErrInsufficientStock
 	}
 }
 
-func (s *ProductService) createBackorder(ctx context.Context, product *domain.Product, orderID uuid.UUID, quantity int) error {
+func (s *ProductService) createBackorder(ctx context.Context, product *domain.Product, orderID uuid.UUID, quantity int, recipientEmail, recipientName string) error {
 	backorder := &domain.Backorder{
 		ProductID: product.ID,
 		OrderID:   orderID,
@@ -131,7 +126,7 @@ func (s *ProductService) createBackorder(ctx context.Context, product *domain.Pr
 			StockAvailable:    product.StockQuantity,
 			FailureReason:     domain.FailureReasonDBError,
 			ErrorDetail:       err.Error(),
-		})
+		}, recipientEmail, recipientName)
 		return err
 	}
 
@@ -139,14 +134,14 @@ func (s *ProductService) createBackorder(ctx context.Context, product *domain.Pr
 		log.Printf("failed to notify backorder created for product %s: %v", product.ID, err)
 	}
 	if s.emailPort != nil {
-		if err := s.emailPort.SendBackorderCreatedEmail(ctx, s.defaultRecipientEmail, s.defaultRecipientName, product.ID, product.Name, orderID, quantity); err != nil {
+		if err := s.emailPort.SendBackorderCreatedEmail(ctx, recipientEmail, recipientName, product.ID, product.Name, orderID, quantity); err != nil {
 			log.Printf("failed to send backorder created email: %v", err)
 		}
 	}
 	return nil
 }
 
-func (s *ProductService) notifyFailed(ctx context.Context, f domain.StockReservationFailure) {
+func (s *ProductService) notifyFailed(ctx context.Context, f domain.StockReservationFailure, recipientEmail, recipientName string) {
 	if f.OccurredAt.IsZero() {
 		f.OccurredAt = time.Now().UTC()
 	}
@@ -159,7 +154,7 @@ func (s *ProductService) notifyFailed(ctx context.Context, f domain.StockReserva
 		if product != nil {
 			productName = product.Name
 		}
-		if err := s.emailPort.SendStockReservationFailedEmail(ctx, s.defaultRecipientEmail, s.defaultRecipientName, f, productName); err != nil {
+		if err := s.emailPort.SendStockReservationFailedEmail(ctx, recipientEmail, recipientName, f, productName); err != nil {
 			log.Printf("failed to send stock reservation failed email: %v", err)
 		}
 	}

@@ -28,9 +28,11 @@ type ordersEventEnvelope struct {
 }
 
 type orderApprovedEvent struct {
-	OrderID    string      `json:"order_id"`
-	Items      []orderItem `json:"items"`
-	ApprovedAt time.Time   `json:"approved_at"`
+	OrderID       string      `json:"order_id"`
+	CustomerName  string      `json:"customer_name"`
+	CustomerEmail string      `json:"customer_email"`
+	Items         []orderItem `json:"items"`
+	ApprovedAt    time.Time   `json:"approved_at"`
 }
 
 type orderItem struct {
@@ -139,7 +141,7 @@ func (c *SQSConsumer) process(ctx context.Context, msg types.Message) error {
 			log.Printf("invalid product id %q in order %s — skipping", item.ID, event.OrderID)
 			continue
 		}
-		if err := c.productSvc.DecreaseStock(ctx, productID, orderID, item.Quantity); err != nil {
+		if err := c.productSvc.DecreaseStock(ctx, productID, orderID, item.Quantity, event.CustomerEmail, event.CustomerName); err != nil {
 			log.Printf("DecreaseStock failed product=%s order=%s: %v", item.ID, event.OrderID, err)
 		}
 	}

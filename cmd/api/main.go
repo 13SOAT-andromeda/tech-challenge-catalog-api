@@ -58,12 +58,9 @@ func main() {
 		emailPublisher = ep
 	}
 
-	notifEmail := os.Getenv("NOTIFICATION_DEFAULT_EMAIL")
-	notifName := os.Getenv("NOTIFICATION_DEFAULT_NAME")
-
 	productRepo := repository.NewProductRepository(db)
 	backorderRepo := repository.NewBackorderRepository(db)
-	productSvc := services.NewProductService(productRepo, backorderRepo, snsPublisher, emailPublisher, notifEmail, notifName)
+	productSvc := services.NewProductService(productRepo, backorderRepo, snsPublisher, emailPublisher)
 
 	sqsConsumer, err := awsadapter.NewSQSConsumer(ctx, productSvc)
 	if err != nil {
