@@ -11,8 +11,8 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-
-	api := r.Group("/api/v1")
+  
+	api := r.Group("/")
 	{
 		products := api.Group("/products")
 		{
