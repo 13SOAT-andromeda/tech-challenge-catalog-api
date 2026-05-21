@@ -136,12 +136,14 @@ jobs:
 
       - name: Generate .env.secrets
         run: |
-          printf 'DB_PASSWORD=%s\nAWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\nAWS_SESSION_TOKEN=%s\nINTERNAL_AUTH_TOKEN=%s\n' \
+          printf 'DB_PASSWORD=%s\nAWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\nAWS_SESSION_TOKEN=%s\nINTERNAL_AUTH_TOKEN=%s\nADMIN_EMAIL=%s\nADMIN_DOCUMENT=%s\n' \
             "${{ secrets.AWS_RDS_DB_PASSWORD }}" \
             "${{ secrets.AWS_ACCESS_KEY_ID }}" \
             "${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
             "${{ secrets.AWS_SESSION_TOKEN }}" \
             "${{ secrets.INTERNAL_AUTH_TOKEN }}" \
+            "${{ secrets.USER_ADMIN_EMAIL }}" \
+            "${{ secrets.ADMIN_DOCUMENT }}" \
             > k8s/overlays/aws/.env.secrets
 
       - name: Apply kustomize overlay to EKS
