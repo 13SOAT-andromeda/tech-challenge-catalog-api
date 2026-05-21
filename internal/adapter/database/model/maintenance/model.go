@@ -16,6 +16,7 @@ func (m *Maintenance) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Maintenance struct {
+	SerialID          int64     `gorm:"autoIncrement;uniqueIndex;not null"`
 	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Description       string    `gorm:"type:text;not null"`
 	BasePrice         float64   `gorm:"type:decimal(10,2);not null"`
@@ -27,6 +28,7 @@ type Maintenance struct {
 
 func (m *Maintenance) ToDomain() *domain.Maintenance {
 	return &domain.Maintenance{
+		SerialID:          m.SerialID,
 		ID:                m.ID,
 		Description:       m.Description,
 		BasePrice:         m.BasePrice,
@@ -39,6 +41,7 @@ func (m *Maintenance) ToDomain() *domain.Maintenance {
 
 func FromDomain(d *domain.Maintenance) *Maintenance {
 	return &Maintenance{
+		SerialID:          d.SerialID,
 		ID:                d.ID,
 		Description:       d.Description,
 		BasePrice:         d.BasePrice,

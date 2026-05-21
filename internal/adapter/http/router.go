@@ -24,6 +24,7 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 			products.GET("/:id", productH.GetByID)
 			products.PUT("/:id", productH.Update)
 			products.DELETE("/:id", productH.Delete)
+			products.POST("/check-batch", productH.CheckBatch)
 		}
 
 		maintenances := api.Group("/maintenances")
@@ -33,6 +34,7 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 			maintenances.GET("/:id", maintenanceH.GetByID)
 			maintenances.PUT("/:id", maintenanceH.Update)
 			maintenances.DELETE("/:id", maintenanceH.Delete)
+			maintenances.GET("/check-batch", maintenanceH.CheckBatch)
 		}
 	}
 

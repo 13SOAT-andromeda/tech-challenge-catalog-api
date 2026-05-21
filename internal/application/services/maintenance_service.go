@@ -33,3 +33,7 @@ func (s *MaintenanceService) Update(maintenance *domain.Maintenance) error {
 func (s *MaintenanceService) Delete(id uuid.UUID) error {
 	return s.repo.Delete(id)
 }
+
+func (s *MaintenanceService) GetBatch(ids []int64) ([]*domain.Maintenance, error) {
+	return s.repo.FindBatchBySerialIDs(ids)
+}

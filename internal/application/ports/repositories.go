@@ -20,6 +20,7 @@ type ProductRepository interface {
 	Delete(id uuid.UUID) error
 	List() ([]*domain.Product, error)
 	UpdateStock(id uuid.UUID, quantity int) error
+	FindBatchBySerialIDs(ids []int64) ([]*domain.Product, error)
 }
 
 type MaintenanceRepository interface {
@@ -28,6 +29,7 @@ type MaintenanceRepository interface {
 	Update(maintenance *domain.Maintenance) error
 	Delete(id uuid.UUID) error
 	List() ([]*domain.Maintenance, error)
+	FindBatchBySerialIDs(ids []int64) ([]*domain.Maintenance, error)
 }
 
 type BackorderRepository interface {

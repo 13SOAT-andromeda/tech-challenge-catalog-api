@@ -141,6 +141,32 @@ func (s *ProductService) createBackorder(ctx context.Context, product *domain.Pr
 	return nil
 }
 
+func (s *ProductService) CheckBatch(items []domain.CheckBatchItem) (bool, []*domain.Product, error) {
+	ids := make([]int64, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+
+	products, err := s.repo.FindBatchBySerialIDs(ids)
+	if err != nil {
+		return false, nil, err
+	}
+
+	qtyMap := make(map[int64]int, len(items))
+	for _, it := range items {
+		qtyMap[it.ID] = it.Qty
+	}
+
+	available := len(products) == len(items)
+	for _, p := range products {
+		if p.StockQuantity < qtyMap[p.SerialID] {
+			available = false
+			break
+		}
+	}
+	return available, products, nil
+}
+
 func (s *ProductService) notifyFailed(ctx context.Context, f domain.StockReservationFailure, recipientEmail, recipientName string) {
 	if f.OccurredAt.IsZero() {
 		f.OccurredAt = time.Now().UTC()

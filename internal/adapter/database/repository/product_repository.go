@@ -71,3 +71,15 @@ func (r *ProductRepositoryGorm) UpdateStock(id uuid.UUID, quantity int) error {
 		return tx.Save(&model).Error
 	})
 }
+
+func (r *ProductRepositoryGorm) FindBatchBySerialIDs(ids []int64) ([]*domain.Product, error) {
+	var models []productmodel.Product
+	if err := r.db.Where("serial_id IN ?", ids).Find(&models).Error; err != nil {
+		return nil, err
+	}
+	products := make([]*domain.Product, len(models))
+	for i, m := range models {
+		products[i] = m.ToDomain()
+	}
+	return products, nil
+}

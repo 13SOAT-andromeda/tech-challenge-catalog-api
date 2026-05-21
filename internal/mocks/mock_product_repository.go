@@ -45,3 +45,11 @@ func (m *MockProductRepository) UpdateStock(id uuid.UUID, quantity int) error {
 	args := m.Called(id, quantity)
 	return args.Error(0)
 }
+
+func (m *MockProductRepository) FindBatchBySerialIDs(ids []int64) ([]*domain.Product, error) {
+	args := m.Called(ids)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.Product), args.Error(1)
+}

@@ -16,6 +16,7 @@ func (p *Product) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Product struct {
+	SerialID              int64     `gorm:"autoIncrement;uniqueIndex;not null"`
 	ID                    uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name                  string    `gorm:"type:varchar(255);not null"`
 	Description           string    `gorm:"type:text"`
@@ -33,6 +34,7 @@ type Product struct {
 
 func (m *Product) ToDomain() *domain.Product {
 	return &domain.Product{
+		SerialID:              m.SerialID,
 		ID:                    m.ID,
 		Name:                  m.Name,
 		Description:           m.Description,
@@ -51,6 +53,7 @@ func (m *Product) ToDomain() *domain.Product {
 
 func FromDomain(d *domain.Product) *Product {
 	return &Product{
+		SerialID:              d.SerialID,
 		ID:                    d.ID,
 		Name:                  d.Name,
 		Description:           d.Description,
