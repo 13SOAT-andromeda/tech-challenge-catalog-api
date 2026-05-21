@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/handlers"
+	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/middlewares"
 )
 
 func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.MaintenanceHandler) *gin.Engine {
@@ -11,13 +12,15 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-  
+
 	api := r.Group("/v1/catalog")
+	api.Use(middlewares.AuthRequired())
+	api.Use(middlewares.RoleRequired("administrator", "attendant", "mechanic"))
 	{
 		products := api.Group("/products")
 		{
-			products.POST("/", productH.Create)
-			products.GET("/", productH.List)
+			products.POST("", productH.Create)
+			products.GET("", productH.List)
 			products.GET("/:id", productH.GetByID)
 			products.PUT("/:id", productH.Update)
 			products.DELETE("/:id", productH.Delete)
@@ -25,8 +28,8 @@ func SetupRouter(productH *handlers.ProductHandler, maintenanceH *handlers.Maint
 
 		maintenances := api.Group("/maintenances")
 		{
-			maintenances.POST("/", maintenanceH.Create)
-			maintenances.GET("/", maintenanceH.List)
+			maintenances.POST("", maintenanceH.Create)
+			maintenances.GET("", maintenanceH.List)
 			maintenances.GET("/:id", maintenanceH.GetByID)
 			maintenances.PUT("/:id", maintenanceH.Update)
 			maintenances.DELETE("/:id", maintenanceH.Delete)
