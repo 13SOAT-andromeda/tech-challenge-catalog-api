@@ -8,6 +8,7 @@ import (
 )
 
 type Product struct {
+	SerialID              int64          `gorm:"autoIncrement;uniqueIndex;not null" json:"serial_id"`
 	ID                    uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
 	Name                  string         `gorm:"type:varchar(255);not null" json:"name"`
 	Description           string         `gorm:"type:text" json:"description"`
