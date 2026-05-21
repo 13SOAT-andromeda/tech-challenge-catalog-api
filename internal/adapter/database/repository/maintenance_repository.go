@@ -53,3 +53,15 @@ func (r *MaintenanceRepositoryGorm) List() ([]*domain.Maintenance, error) {
 	}
 	return maintenances, nil
 }
+
+func (r *MaintenanceRepositoryGorm) FindBatchBySerialIDs(ids []int64) ([]*domain.Maintenance, error) {
+	var models []maintenancemodel.Maintenance
+	if err := r.db.Where("serial_id IN ?", ids).Find(&models).Error; err != nil {
+		return nil, err
+	}
+	maintenances := make([]*domain.Maintenance, len(models))
+	for i, m := range models {
+		maintenances[i] = m.ToDomain()
+	}
+	return maintenances, nil
+}
