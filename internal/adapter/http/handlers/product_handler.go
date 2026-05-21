@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/response"
@@ -92,4 +94,49 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 	}
 
 	response.OK(c, nil)
+}
+
+func (h *ProductHandler) CheckBatch(c *gin.Context) {
+	var req struct {
+		Items []struct {
+			ID  int64 `json:"id"`
+			Qty int   `json:"qty"`
+		} `json:"items"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	items := make([]domain.CheckBatchItem, len(req.Items))
+	for i, it := range req.Items {
+		items[i] = domain.CheckBatchItem{ID: it.ID, Qty: it.Qty}
+	}
+
+	available, products, err := h.service.CheckBatch(items)
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+
+	type productItem struct {
+		ID             int64  `json:"id"`
+		Name           string `json:"name"`
+		Quantity       int    `json:"quantity"`
+		UnitPriceCents int64  `json:"unit_price_cents"`
+	}
+	respItems := make([]productItem, len(products))
+	for i, p := range products {
+		respItems[i] = productItem{
+			ID:             p.SerialID,
+			Name:           p.Name,
+			Quantity:       p.StockQuantity,
+			UnitPriceCents: int64(p.Price * 100),
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"available": available,
+		"items":     respItems,
+	})
 }

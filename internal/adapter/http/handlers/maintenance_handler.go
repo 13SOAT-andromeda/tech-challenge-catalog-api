@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/juliovaz/tech-challenge-catalog-api/internal/adapter/http/response"
@@ -92,4 +96,42 @@ func (h *MaintenanceHandler) Delete(c *gin.Context) {
 	}
 
 	response.OK(c, nil)
+}
+
+func (h *MaintenanceHandler) CheckBatch(c *gin.Context) {
+	raw := c.Query("ids")
+	if raw == "" {
+		response.BadRequest(c, "ids query param is required")
+		return
+	}
+
+	parts := strings.Split(raw, ",")
+	ids := make([]int64, 0, len(parts))
+	for _, p := range parts {
+		if id, err := strconv.ParseInt(strings.TrimSpace(p), 10, 64); err == nil {
+			ids = append(ids, id)
+		}
+	}
+
+	maintenances, err := h.service.GetBatch(ids)
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+
+	type maintenanceItem struct {
+		ID         int64  `json:"id"`
+		Name       string `json:"name"`
+		PriceCents int64  `json:"price_cents"`
+	}
+	items := make([]maintenanceItem, len(maintenances))
+	for i, m := range maintenances {
+		items[i] = maintenanceItem{
+			ID:         m.SerialID,
+			Name:       m.Description,
+			PriceCents: int64(m.BasePrice * 100),
+		}
+	}
+
+	c.JSON(http.StatusOK, items)
 }
